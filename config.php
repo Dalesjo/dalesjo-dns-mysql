@@ -1,10 +1,10 @@
 <?php
-define("dns_host","192.168.61.108");
-define("dns_port","3306");
+define("dns_host","192.168.61.114");
+define("dns_port","3030");
 
 define("dns_database","dns");
 define("dns_user","dns");
-define("dns_password","secret");
+define("dns_password","GPe5q7KuSThjmILCYbMhWn");
 
 // binds root configuration. (används ej just nu)
 define("bindroot","/var/named/");

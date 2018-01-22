@@ -40,12 +40,23 @@ if($stmtServer->execute()) {
     		}
       }
     }
+  }
 
+  if($stmtServer->rowCount() > 0) {
     $stmtUpdate->bindValue(':ns', ns, PDO::PARAM_STR );
     if($stmtUpdate->execute()) {
-      system("rndc reload");
+      exec("/usr/sbin/rndc reload", $logRndc, $rtnRndc);
+      if($rtnRndc === 0) {
+        logtosystem("named/rndc reloaded");
+        exit(0);
+      } else {
+        logtosystem($logRndc);
+        exit(2);
+      }
     }
   }
+
+
 }
 
 ?>
