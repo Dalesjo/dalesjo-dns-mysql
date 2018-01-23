@@ -1,23 +1,18 @@
 <?php
-define("dns_host","192.168.61.114");
-define("dns_port","3030");
-
+/* MySql settings*/
+define("dns_host","");
+define("dns_port","");
 define("dns_database","dns");
 define("dns_user","dns");
-define("dns_password","GPe5q7KuSThjmILCYbMhWn");
+define("dns_password","");
 
-// binds root configuration. (används ej just nu)
+/* Directories used */
 define("bindroot","/var/named/");
-
-// konfigurationsfil för domäner via mybind (bör ägas av root)
 define("bindconf","/etc/named.mysql.conf");
-
-
 define("bindconf_tmp","/tmp/named.mysql.conf");
+define("tmp","/tmp/dalesjo-dns-mysql/");
 
-/* Domännamn för dns server */
+/* Name of domainserver*/
 define("ns","ns1.fnf.nu.");
 
-// temporary folder.
-define("tmp","/tmp/dalesjo-dns-mysql/");
 ?>
