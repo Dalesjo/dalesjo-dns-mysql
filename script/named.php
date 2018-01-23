@@ -31,8 +31,6 @@ ORDER BY z.`zone` asc;
 ");
 
 
-
-
 $stmtZones->bindValue(':ns', ns, PDO::PARAM_STR );
 if($stmtZones->execute() && $stmtServers->execute()) {
 
@@ -51,14 +49,14 @@ if($stmtZones->execute() && $stmtServers->execute()) {
 
 	      exec("/usr/sbin/named-checkzone $zonename $zonefile", $logCheckzone, $rtnCheckzone);
 	      if($rtnCheckzone === 0) {
-					if(fwrite($f,sprintf("zone \"%s\" IN {\n\ttype master;\n\tfile \"%s\";\n\tallow-transfer { trusted-mysql-servers; };\n};\n\n",$zone["zone"],dnsNameReverse($zone["zone"])))) {
+					if(fwrite($f,sprintf("zone \"%s\" IN {\n\ttype master;\n\tfile \"%s\";\n\tnotify yes;\n\tallow-transfer { trusted-mysql-servers; };\n};\n\n",$zone["zone"],dnsNameReverse($zone["zone"])))) {
 						logtosystem(bindconf." updated as master for:\t".$zone["zone"]);
 					}
 				} else {
 						logtosystem(bindconf." error in zonefile for:\t".$zone["zone"]);
 				}
 	    } else {
-	      if(fwrite($f,sprintf("zone \"%s\" IN {\n\ttype slave;\n\tfile \"slaves/%s\";\n\tallow-transfer { trusted-mysql-servers; };\n\tmasters {\n%s\n\t};\n};\n\n",$zone["zone"],dnsNameReverse($zone["zone"]),$zone["ips"]))) {
+	      if(fwrite($f,sprintf("zone \"%s\" IN {\n\ttype slave;\n\tfile \"slaves/%s\";\n\tallow-notify { trusted-mysql-servers; };\n\tallow-transfer { trusted-mysql-servers; };\n\tmasters {\n%s\n\t};\n};\n\n",$zone["zone"],dnsNameReverse($zone["zone"]),$zone["ips"]))) {
 	        logtosystem(bindconf." updated as slave for:\t".$zone["zone"]);
 	      }
 	    }
@@ -83,7 +81,7 @@ if($stmtZones->execute() && $stmtServers->execute()) {
  					logtosystem("named/rndc reloaded");
  					exit(0);
  				} else {
- 					logtosystem($logRndc);
+ 					logtosystem(implode("\n",$logRndc));
  					exit(2);
  				}
  			}

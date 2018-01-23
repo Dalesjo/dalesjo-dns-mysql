@@ -50,7 +50,7 @@ if($stmtServer->execute()) {
         logtosystem("named/rndc reloaded");
         exit(0);
       } else {
-        logtosystem($logRndc);
+        logtosystem(implode("\n",$logRndc));
         exit(2);
       }
     }
