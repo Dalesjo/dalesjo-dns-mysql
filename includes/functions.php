@@ -5,12 +5,18 @@ if(!is_dir(tmp)) {
   mkdir(tmp,0022,true);
 }
 
-$pdo = new pdo('mysql:host='. dns_host .';port='. dns_port.';dbname='. dns_database,  dns_user, dns_password,
-            array( 	PDO::ATTR_PERSISTENT => false,
-                    PDO::ATTR_STRINGIFY_FETCHES => false,
-                    PDO::ATTR_EMULATE_PREPARES => false,
-                    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-                    PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION));
+try {
+  $pdo = new pdo('mysql:host='. dns_host .';port='. dns_port.';dbname='. dns_database,  dns_user, dns_password,
+              array( 	PDO::ATTR_PERSISTENT => false,
+                      PDO::ATTR_STRINGIFY_FETCHES => false,
+                      PDO::ATTR_EMULATE_PREPARES => false,
+                      PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+                      PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION));
+
+} catch (PDOException $e) {
+    echo "NO DATABASE\n";
+    exit(100);
+}
 
 
 /* dnsReverse */
