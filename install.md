@@ -20,7 +20,9 @@ PATH=/sbin:/bin:/usr/sbin:/usr/bin
 ```
 Run the command below to secure files
 
-```#chmod o= /etc/cron.d/dns
-#chmod o= /root/bin/dalesjo-dns-mysql/
-#chown root:named /etc/named.mysql.conf
-#chmod o= /etc/named.mysql.conf```
+```
+chmod o= /etc/cron.d/dns
+chmod o= /root/bin/dalesjo-dns-mysql/
+chown root:named /etc/named.mysql.conf
+chmod o= /etc/named.mysql.conf
+```
