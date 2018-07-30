@@ -2,7 +2,7 @@
 
 Create cron script to run zones.php every 6th minute (for dyndns).
 
-# nano /etc/cron.d/dns
+# /etc/cron.d/dns
 ```
 SHELL=/bin/bash
 PATH=/sbin:/bin:/usr/sbin:/usr/bin
