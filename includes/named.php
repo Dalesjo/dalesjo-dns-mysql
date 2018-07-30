@@ -37,7 +37,6 @@ class named {
       if($this->checkTmp()) {
 
         /* rename() changes permission of configuration file */
-        /* rename() changes permission of configuration file */
         $validData = file_get_contents($this->tmp);
         if(file_put_contents($this->file,$validData)) {
           return true;

@@ -50,15 +50,14 @@ if($stmtZones->execute() && $stmtServers->execute()) {
 				$zoneConfig = sprintf("zone \"%s\" IN {\n",$zone["zone"]);
 				$zoneConfig .= sprintf("\ttype master;\n");
 				if($zone["dnssec"] === 1 && $z->checkSignedZone()) {
-					//$zoneConfig .= sprintf("\tdnssec-enable yes;\n");
-					//$zoneConfig .= sprintf("\tdnssec-validation yes;\n");
-					//$zoneConfig .= sprintf("\tdnssec-lookaside auto;\n");
 					$zoneConfig .= sprintf("\tfile \"%s\";\n", $z->signed);
 				} else {
 					$zoneConfig .= sprintf("\tfile \"%s\";\n", $z->file);
 				}
 				$zoneConfig .= sprintf("\tnotify yes;\n");
 				$zoneConfig .= sprintf("\tallow-transfer { trusted-mysql-servers; };\n");
+				$zoneConfig .= sprintf("\tallow-update { none; };\n");
+
 				$zoneConfig .= sprintf("};\n\n");
 
 				$data .= $zoneConfig;
@@ -72,12 +71,7 @@ if($stmtZones->execute() && $stmtServers->execute()) {
 			$zoneConfig .= sprintf("\ttype slave;\n");
 			$zoneConfig .= sprintf("\tfile \"slaves/%s\";\n", zone::dnsNameReverse($zone["zone"]));
 
-			if($zone["dnssec"] === 1) {
-				//$zoneConfig .= sprintf("\tdnssec-enable yes;\n");
-				//$zoneConfig .= sprintf("\tdnssec-validation yes;\n");
-				//$zoneConfig .= sprintf("\tdnssec-lookaside auto;\n");
-			}
-
+			$zoneConfig .= sprintf("\tnotify yes;\n");
 			$zoneConfig .= sprintf("\tallow-notify { trusted-mysql-servers; };\n");
 			$zoneConfig .= sprintf("\tallow-transfer { trusted-mysql-servers; };\n");
 			$zoneConfig .= sprintf("\tmasters {\n%s\n\t};\n",$zone["ips"]);
