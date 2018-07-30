@@ -64,7 +64,7 @@ $stmtZones->bindValue(':ns', ns, PDO::PARAM_STR );
 $stmtServer->bindValue(':ns', ns, PDO::PARAM_STR );
 if($stmtServer->execute() && $stmtZones->execute() && $stmtServers->execute() && $stmtTrustedServers->execute() && $stmtLocalServers->execute()) {
 	while($ns = $stmtServer->fetch()) {
-		echo var_dump($ns);
+		
 		$named = new named(bindconf_tmp,bindconf);
 		$data = "acl mysql-servers  {\n";
 		while($server = $stmtServers->fetch()) {
@@ -132,7 +132,7 @@ if($stmtServer->execute() && $stmtZones->execute() && $stmtServers->execute() &&
 	      $log->info(bindconf." updated as slave for:\t".$zone["zone"]);
 	    }
 	  }
-echo var_dump($ns);
+
 		if($named->writeConf($data)) {
 			$named->reload();
 			$log->info("named/rdnc reloaded");
