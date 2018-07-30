@@ -16,27 +16,38 @@ $stmtUpdate = $pdo->prepare("
     update_server(:ns);
 ");
 
+$stmtUpdateZone = $pdo->prepare("
+  SELECT
+    update_zoneServer(:ns,:zone);
+");
+
 $stmtZones = $pdo->prepare("
   SELECT
     z.`zone`
   FROM zones AS z
   INNER JOIN zoneServers AS zs ON zs.zone=z.zone
-  WHERE z.`serial` > :time
+  WHERE (zs.configUpdated is null or z.`serial` > zs.configUpdated  )
   AND zs.server=:ns;
 ");
 
 $stmtServer->bindValue(':ns', ns, PDO::PARAM_STR );
+
 if($stmtServer->execute()) {
   while($server = $stmtServer->fetch()) {
-    $stmtZones->bindValue(':time', $server["configUpdated"], PDO::PARAM_STR );
-    $stmtZones->bindValue(':ns', ns, PDO::PARAM_STR );
+    $stmtUpdateZone->bindValue(':ns', $server["server"], PDO::PARAM_STR );
+    $stmtZones->bindValue(':ns', $server["server"], PDO::PARAM_STR );
 
     if($stmtZones->execute()) {
       while($zone = $stmtZones->fetch()) {
-        if(dnsWriteZone($pdo,$zone["zone"])) {
-    			logtosystem($zone["zone"] ." updated.");
+        if(dnsWriteZone($pdo,$log,$zone["zone"])) {
+          $stmtUpdateZone->bindValue(':zone', $zone["zone"], PDO::PARAM_STR );
+          if($stmtUpdateZone->execute()) {
+            $log->info($zone["zone"] ." updated.");
+          } else {
+            $log->info($zone["zone"] ." database malfunction.");
+          }
     		} else {
-    			logtosystem($zone["zone"] ." error.");
+    			$log->info($zone["zone"] ." error.");
     		}
       }
     }
@@ -44,15 +55,15 @@ if($stmtServer->execute()) {
 
   if($stmtServer->rowCount() > 0) {
     $stmtUpdate->bindValue(':ns', ns, PDO::PARAM_STR );
-    if($stmtUpdate->execute()) {
-      exec("/usr/sbin/rndc reload", $logRndc, $rtnRndc);
-      if($rtnRndc === 0) {
-        logtosystem("named/rndc reloaded");
+    exec("/usr/sbin/rndc reload", $logRndc, $rtnRndc);
+    if($rtnRndc === 0) {
+      $log->info("named/rndc reloaded");
+      if($stmtUpdate->execute()) {
         exit(0);
-      } else {
-        logtosystem(implode("\n",$logRndc));
-        exit(2);
       }
+    } else {
+      $log->info(implode("\n",$logRndc));
+      exit(2);
     }
   }
 

@@ -18,6 +18,7 @@ SELECT
 	z.`retry`,
 	z.`expire`,
 	z.`minimum`,
+	z.dnssec,
 	(select
 		concat('\t\t',GROUP_CONCAT(sip.ip SEPARATOR ';\n\t\t'),';')
 	FROM zoneServers as zsip
@@ -34,68 +35,65 @@ ORDER BY z.`zone` asc;
 $stmtZones->bindValue(':ns', ns, PDO::PARAM_STR );
 if($stmtZones->execute() && $stmtServers->execute()) {
 
-  $f 		= fopen(bindconf_tmp,'w');
-
-	$acl = "acl trusted-mysql-servers  {\n";
+	$named = new named(bindconf_tmp,bindconf);
+	$data = "acl trusted-mysql-servers  {\n";
 	while($server = $stmtServers->fetch()) {
-		$acl .= sprintf("\t%s; // %s\n",$server["ip"],$server["server"]);
+		$data .= sprintf("\t%s; // %s\n",$server["ip"],$server["server"]);
 	}
-	$acl .= "};\n\n";
-	if(fwrite($f,$acl)) {
-	  while($zone = $stmtZones->fetch()){
-	    if($zone["master"] === 1) {
-	      $zonefile		= escapeshellarg(bindroot . dnsNameReverse($zone["zone"]));
-	      $zonename = escapeshellarg($zone["zone"]);
+	$data .= "};\n\n";
 
-	      exec("/usr/sbin/named-checkzone $zonename $zonefile", $logCheckzone, $rtnCheckzone);
-	      if($rtnCheckzone === 0) {
-					if(fwrite($f,sprintf("zone \"%s\" IN {\n\ttype master;\n\tfile \"%s\";\n\tnotify yes;\n\tallow-transfer { trusted-mysql-servers; };\n};\n\n",$zone["zone"],dnsNameReverse($zone["zone"])))) {
-						logtosystem(bindconf." updated as master for:\t".$zone["zone"]);
-					}
+  while($zone = $stmtZones->fetch()){
+    if($zone["master"] === 1) {
+			$z = new zone($zone["zone"],$log);
+
+      if($z->checkZone()) {
+				$zoneConfig = sprintf("zone \"%s\" IN {\n",$zone["zone"]);
+				$zoneConfig .= sprintf("\ttype master;\n");
+				if($zone["dnssec"] === 1 && $z->checkSignedZone()) {
+					//$zoneConfig .= sprintf("\tdnssec-enable yes;\n");
+					//$zoneConfig .= sprintf("\tdnssec-validation yes;\n");
+					//$zoneConfig .= sprintf("\tdnssec-lookaside auto;\n");
+					$zoneConfig .= sprintf("\tfile \"%s\";\n", $z->signed);
 				} else {
-						logtosystem(bindconf." error in zonefile for:\t".$zone["zone"]);
+					$zoneConfig .= sprintf("\tfile \"%s\";\n", $z->file);
 				}
-	    } else {
-	      if(fwrite($f,sprintf("zone \"%s\" IN {\n\ttype slave;\n\tfile \"slaves/%s\";\n\tallow-notify { trusted-mysql-servers; };\n\tallow-transfer { trusted-mysql-servers; };\n\tmasters {\n%s\n\t};\n};\n\n",$zone["zone"],dnsNameReverse($zone["zone"]),$zone["ips"]))) {
-	        logtosystem(bindconf." updated as slave for:\t".$zone["zone"]);
-	      }
-	    }
-	  }
-	}
-	fclose($f);
+				$zoneConfig .= sprintf("\tnotify yes;\n");
+				$zoneConfig .= sprintf("\tallow-transfer { trusted-mysql-servers; };\n");
+				$zoneConfig .= sprintf("};\n\n");
 
-  /**
-   * test temporary named.conf and replace old named.conf if ok.
-   */
-	 if(is_file(bindconf_tmp)) {
-		exec("/usr/sbin/named-checkconf ". bindconf_tmp, $logCheckConf, $rtnCheckConf);
- 		if($rtnCheckConf === 0)	{
- 			if(is_file(bindconf)) {
- 				unlink(bindconf);
- 			}
+				$data .= $zoneConfig;
+				$log->info(bindconf." updated as master for:\t".$zone["zone"]);
 
- 			if(rename(bindconf_tmp,bindconf)) {
- 				exec("/usr/sbin/rndc reload", $logRndc, $rtnRndc);
+			} else {
+					$log->info(bindconf." error in zonefile for:\t".$zone["zone"]);
+			}
+    } else {
+			$zoneConfig = sprintf("zone \"%s\" IN {\n",$zone["zone"]);
+			$zoneConfig .= sprintf("\ttype slave;\n");
+			$zoneConfig .= sprintf("\tfile \"slaves/%s\";\n", zone::dnsNameReverse($zone["zone"]));
 
- 				if($rtnRndc === 0) {
- 					logtosystem("named/rndc reloaded");
- 					exit(0);
- 				} else {
- 					logtosystem(implode("\n",$logRndc));
- 					exit(2);
- 				}
- 			}
- 		} else {
- 			logtosystem($logCheckConf);
- 			exit(1);
- 		}
+			if($zone["dnssec"] === 1) {
+				//$zoneConfig .= sprintf("\tdnssec-enable yes;\n");
+				//$zoneConfig .= sprintf("\tdnssec-validation yes;\n");
+				//$zoneConfig .= sprintf("\tdnssec-lookaside auto;\n");
+			}
+
+			$zoneConfig .= sprintf("\tallow-notify { trusted-mysql-servers; };\n");
+			$zoneConfig .= sprintf("\tallow-transfer { trusted-mysql-servers; };\n");
+			$zoneConfig .= sprintf("\tmasters {\n%s\n\t};\n",$zone["ips"]);
+			$zoneConfig .= sprintf("};\n\n");
+			$data .= $zoneConfig;
+
+      $log->info(bindconf." updated as slave for:\t".$zone["zone"]);
+    }
+  }
+
+	if($named->writeConf($data)) {
+		$named->reload();
+		$log->info("named/rdnc reloaded");
 	} else {
-		logtosystem("Missing file ". bindconf_tmp);
-		exit(3);
+		$log->warning("Configuration file not valid, aborting");
 	}
-
 
 }
-
-
 ?>

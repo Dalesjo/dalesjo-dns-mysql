@@ -1,8 +1,13 @@
 <?php
-umask(0022);
+umask(0027);
+require_once(__dir__ ."/zone.php");
+require_once(__dir__ ."/named.php");
+require_once(__dir__ ."/log.php");
+
+$log = new log(true);
 
 if(!is_dir(tmp)) {
-  mkdir(tmp,0022,true);
+  mkdir(tmp,0750,true);
 }
 
 try {
@@ -18,32 +23,8 @@ try {
     exit(100);
 }
 
-
-/* dnsReverse */
-function dnsNameReverse($domain) {
-
-  $domain 	= trim($domain,".");
-	$part 		= explode(".",$domain);
-	$filename 	= "";
-
-  for($i=sizeof($part)-1; $i >= 0;$i--) {
-		$filename .= $part[$i] .".";
-	}
-
-	$filename = trim($filename,".");
-	return $filename;
-}
-
-function logtosystem($msg,$level=LOG_INFO)
+function dnsWriteZone(pdo $pdo,log $log,$zone)
 {
-	syslog($level,$msg);
-	echo "MyBind: ".$msg."\n";
-}
-
-
-function dnsWriteZone(pdo $pdo,$zone)
-{
-
   $stmtSoa = $pdo->prepare("
     SELECT
       `zone`,
@@ -54,7 +35,10 @@ function dnsWriteZone(pdo $pdo,$zone)
       `expire`,
       `minimum`,
       `email`,
-      `ttl`
+      `ttl`,
+      publicZSK,
+      publicKSK,
+      dnssec
     FROM zones
     WHERE zone=:zone
     limit 1;
@@ -81,7 +65,14 @@ function dnsWriteZone(pdo $pdo,$zone)
   $stmtSoa->bindValue(':zone', $zone, PDO::PARAM_STR );
   if($stmtSoa->execute()) {
     while($soa = $stmtSoa->fetch()) {
+
+      $named = new zone($zone,$log);
       $dns 		= sprintf("%s %s SOA %s %s (\n%d\n%d\n%d\n%d\n%d\n)\n\n",$soa["zone"],$soa["ttl"],$soa["server"],$soa["email"],$soa["serial"],$soa["refresh"],$soa["retry"],$soa["expire"],$soa["minimum"]);
+
+      if($soa["dnssec"] === 1) {
+        $dns .= sprintf("\$INCLUDE %s/%s\n", $named->dir, $soa["publicZSK"]);
+        $dns .= sprintf("\$INCLUDE %s/%s\n", $named->dir, $soa["publicKSK"]);
+      }
 
       $stmtDomains->bindValue(':zone', $zone, PDO::PARAM_STR );
       if($stmtDomains->execute()) {
@@ -90,45 +81,27 @@ function dnsWriteZone(pdo $pdo,$zone)
     				case "MX":
     				$dns .= sprintf("%s\t\tIN %d\t%s\t%d\t%s\n",$domain["domain"],$domain["ttl"],strtoupper($domain["type"]),$domain["priority"],$domain["data"]);
     				break;
-
     				case "SRV":
     				$dns .= sprintf("%s\t\tIN %d\t%s\t%d\t%d\t%d\t%s\n",$domain["domain"],$domain["ttl"],strtoupper($domain["type"]),$domain["priority"],$domain["weight"],$domain["port"],$domain["data"]);
     				break;
-
     				case "NS":
-    				$dns .= sprintf("%s\t\tIN %d\t%s\t\t%s\n",$domain["domain"],$domain["ttl"],strtoupper($domain["type"]),$domain["data"]);
-    				break;
-
     				case "CNAME":
-    				$dns .= sprintf("%s\t\tIN %d\t%s\t\t%s\n",$domain["domain"],$domain["ttl"],strtoupper($domain["type"]),$domain["data"]);
-    				break;
+  			    default:
 
-    			    default:
     				$dns .= sprintf("%s\t\tIN %d\t%s\t\t%s\n",$domain["domain"],$domain["ttl"],strtoupper($domain["type"]),$domain["data"]);
     			}
         }
-
       }
-
-      $filetmp	= tmp . dnsNameReverse($soa["zone"]);
-      $file		= bindroot . dnsNameReverse($soa["zone"]);
-      if(file_put_contents($filetmp,$dns)) {
-        exec("/usr/sbin/named-checkzone $zone $filetmp", $log, $rtn);
-        if($rtn == 0) {
-          if(is_file($file)) {
-            unlink($file);
-          }
-
-          if(rename($filetmp,$file)) {
+      if($named->writeZone($dns)) {
+        if($soa["dnssec"] === 1) {
+          if($named->signZone()) {
             return true;
           }
+        } else {
+          return true;
         }
       }
-
     }
-
-
-
   }
 
 	return false;
