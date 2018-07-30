@@ -18,8 +18,10 @@ try {
                       PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
                       PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION));
 
+  $log->info("DATABAS CONNECTED");
+
 } catch (PDOException $e) {
-    echo "NO DATABASE\n";
+    echo "DATABAS CONNECTION FAILED\n";
     exit(100);
 }
 

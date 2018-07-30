@@ -6,7 +6,8 @@ $stmtServer = $pdo->prepare("
   SELECT
     `server`,
     `ip`,
-    `configUpdated`
+    `configUpdated`,
+		`notifyLocalOnly`
   FROM servers
   WHERE server=:ns;
 ");
