@@ -31,6 +31,8 @@ $stmtZones = $pdo->prepare("
   AND zs.server=:ns;
 ");
 
+$status = 0;
+
 $stmtServer->bindValue(':ns', ns, PDO::PARAM_STR );
 
 if($stmtServer->execute()) {
@@ -48,7 +50,8 @@ if($stmtServer->execute()) {
             $log->info($zone["zone"] ." database malfunction.");
           }
     		} else {
-    			$log->info($zone["zone"] ." error.");
+          $log->info($zone["zone"] ." error.");
+          $status++;
     		}
       }
     }
@@ -60,15 +63,15 @@ if($stmtServer->execute()) {
     if($rtnRndc === 0) {
       $log->info("named/rndc reloaded");
       if($stmtUpdate->execute()) {
-        exit(0);
+        $status++;
       }
     } else {
       $log->info(implode("\n",$logRndc));
-      exit(2);
+      $status++;
     }
   }
-
-
 }
+
+exit($status);
 
 ?>

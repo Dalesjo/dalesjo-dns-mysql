@@ -59,9 +59,10 @@ INNER JOIN servers AS s ON s.server = z.server
 ORDER BY z.`zone` asc;
 ");
 
-
 $stmtZones->bindValue(':ns', ns, PDO::PARAM_STR );
 $stmtServer->bindValue(':ns', ns, PDO::PARAM_STR );
+$status = 0;
+
 if($stmtServer->execute() && $stmtZones->execute() && $stmtServers->execute() && $stmtTrustedServers->execute() && $stmtLocalServers->execute()) {
 	while($ns = $stmtServer->fetch()) {
 		
@@ -116,6 +117,7 @@ if($stmtServer->execute() && $stmtZones->execute() && $stmtServers->execute() &&
 
 				} else {
 						$log->warning(bindconf." error in zonefile for:\t".$zone["zone"]);
+						$status++;
 				}
 	    } else {
 				$zoneConfig = sprintf("zone \"%s\" IN {\n",$zone["zone"]);
@@ -138,7 +140,10 @@ if($stmtServer->execute() && $stmtZones->execute() && $stmtServers->execute() &&
 			$log->info("named/rdnc reloaded");
 		} else {
 			$log->error("Configuration file not valid, aborting");
+			$status++;
 		}
 	}
 }
+
+exit($status);
 ?>
