@@ -15,4 +15,6 @@ define("tmp","/tmp/dalesjo-dns-mysql/");
 /* Name of domainserver*/
 define("ns","ns1.fnf.nu.");
 
+define("debug",true);
+
 ?>

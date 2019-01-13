@@ -115,7 +115,7 @@ if($stmtServer->execute() && $stmtZones->execute() && $stmtServers->execute() &&
 					$log->info(bindconf." updated as master for:\t".$zone["zone"]);
 
 				} else {
-						$log->info(bindconf." error in zonefile for:\t".$zone["zone"]);
+						$log->warning(bindconf." error in zonefile for:\t".$zone["zone"]);
 				}
 	    } else {
 				$zoneConfig = sprintf("zone \"%s\" IN {\n",$zone["zone"]);
@@ -137,7 +137,7 @@ if($stmtServer->execute() && $stmtZones->execute() && $stmtServers->execute() &&
 			$named->reload();
 			$log->info("named/rdnc reloaded");
 		} else {
-			$log->warning("Configuration file not valid, aborting");
+			$log->error("Configuration file not valid, aborting");
 		}
 	}
 }

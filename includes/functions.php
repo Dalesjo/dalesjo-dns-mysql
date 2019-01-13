@@ -4,7 +4,7 @@ require_once(__dir__ ."/zone.php");
 require_once(__dir__ ."/named.php");
 require_once(__dir__ ."/log.php");
 
-$log = new log(true);
+$log = new log(debug);
 
 if(!is_dir(tmp)) {
   mkdir(tmp,0750,true);

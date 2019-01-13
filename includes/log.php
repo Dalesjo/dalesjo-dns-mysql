@@ -22,6 +22,7 @@ class log {
   private function log(int $priority,string $message) {
     if($this->debug) {
       echo "Debug: ".$message."\n";
+      syslog($priority,$message);
     } else {
       syslog($priority,$message);
     }
