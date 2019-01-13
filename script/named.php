@@ -59,27 +59,34 @@ INNER JOIN servers AS s ON s.server = z.server
 ORDER BY z.`zone` asc;
 ");
 
-$stmtZones->bindValue(':ns', ns, PDO::PARAM_STR );
-$stmtServer->bindValue(':ns', ns, PDO::PARAM_STR );
 $status = 0;
 
+$stmtZones->bindValue(':ns', ns, PDO::PARAM_STR );
+$stmtServer->bindValue(':ns', ns, PDO::PARAM_STR );
 if($stmtServer->execute() && $stmtZones->execute() && $stmtServers->execute() && $stmtTrustedServers->execute() && $stmtLocalServers->execute()) {
 	while($ns = $stmtServer->fetch()) {
-		
+
 		$named = new named(bindconf_tmp,bindconf);
-		$data = "acl mysql-servers  {\n";
+		$data = "acl mysql-knowned-servers  {\n";
 		while($server = $stmtServers->fetch()) {
 			$data .= sprintf("\t%s; // %s\n",$server["ip"],$server["server"]);
 		}
 		$data .= "};\n\n";
 
-		$data .= "acl trusted-mysql-servers  {\n";
+		$data .= "acl mysql-trusted-servers  {\n";
 		while($server = $stmtTrustedServers->fetch()) {
 			$data .= sprintf("\t%s; // %s\n",$server["ip"],$server["server"]);
 		}
 		$data .= "};\n\n";
 
-		$data .= "masters local-mysql-servers  {\n";
+		$data .= "masters mysql-local-servers-notify  {\n";
+		while($server = $stmtLocalServers->fetch()) {
+			$data .= sprintf("\t%s; // %s\n",$server["localIP"],$server["server"]);
+		}
+		$data .= "};\n\n";
+
+		$stmtLocalServers->execute();
+		$data .= "acl mysql-local-servers-transfer  {\n";
 		while($server = $stmtLocalServers->fetch()) {
 			$data .= sprintf("\t%s; // %s\n",$server["localIP"],$server["server"]);
 		}
@@ -101,13 +108,19 @@ if($stmtServer->execute() && $stmtZones->execute() && $stmtServers->execute() &&
 					if($ns["notifyLocalOnly"] > 0) {
 						$zoneConfig .= sprintf("\tnotify explicit;\n");
 						$zoneConfig .= sprintf("\tnotify-source %s;\n",$ns["localIP"]);
-						$zoneConfig .= sprintf("\talso-notify { local-mysql-servers; };\n");
+						$zoneConfig .= sprintf("\talso-notify { mysql-local-servers-notify; };\n");
 					} elseif($ns["notify"] > 0) {
 						$zoneConfig .= sprintf("\tnotify yes;\n");
 					} else {
 						$zoneConfig .= sprintf("\tnotify no;\n");
 					}
-					$zoneConfig .= sprintf("\tallow-transfer { mysql-servers; };\n");
+
+					if($ns["notifyLocalOnly"] > 0) {
+						$zoneConfig .= sprintf("\tallow-transfer { mysql-local-servers-transfer; };\n");
+					} else {
+						$zoneConfig .= sprintf("\tallow-transfer { mysql-knowned-servers; };\n");
+					}
+
 					$zoneConfig .= sprintf("\tallow-update { none; };\n");
 
 					$zoneConfig .= sprintf("};\n\n");
@@ -116,7 +129,7 @@ if($stmtServer->execute() && $stmtZones->execute() && $stmtServers->execute() &&
 					$log->info(bindconf." updated as master for:\t".$zone["zone"]);
 
 				} else {
-						$log->warning(bindconf." error in zonefile for:\t".$zone["zone"]);
+						$log->error(bindconf." error in zonefile for:\t".$zone["zone"]);
 						$status++;
 				}
 	    } else {
@@ -125,8 +138,8 @@ if($stmtServer->execute() && $stmtZones->execute() && $stmtServers->execute() &&
 				$zoneConfig .= sprintf("\tfile \"slaves/%s\";\n", zone::dnsNameReverse($zone["zone"]));
 
 				$zoneConfig .= sprintf("\tnotify yes;\n");
-				$zoneConfig .= sprintf("\tallow-notify { trusted-mysql-servers; };\n");
-				$zoneConfig .= sprintf("\tallow-transfer { mysql-servers; };\n");
+				$zoneConfig .= sprintf("\tallow-notify { mysql-trusted-servers; };\n");
+				$zoneConfig .= sprintf("\tallow-transfer { mysql-knowned-servers; };\n");
 				$zoneConfig .= sprintf("\tmasters {\n%s\n\t};\n",$zone["ips"]);
 				$zoneConfig .= sprintf("};\n\n");
 				$data .= $zoneConfig;
