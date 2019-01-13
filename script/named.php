@@ -126,10 +126,10 @@ if($stmtServer->execute() && $stmtZones->execute() && $stmtServers->execute() &&
 					$zoneConfig .= sprintf("};\n\n");
 
 					$data .= $zoneConfig;
-					$log->info(bindconf." updated as master for:\t".$zone["zone"]);
+					$log->info(bindconf." updated as master for: ".$zone["zone"]);
 
 				} else {
-						$log->error(bindconf." error in zonefile for:\t".$zone["zone"]);
+						$log->error(bindconf." error in zonefile for: ".$zone["zone"]);
 						$status++;
 				}
 	    } else {
@@ -144,7 +144,7 @@ if($stmtServer->execute() && $stmtZones->execute() && $stmtServers->execute() &&
 				$zoneConfig .= sprintf("};\n\n");
 				$data .= $zoneConfig;
 
-	      $log->info(bindconf." updated as slave for:\t".$zone["zone"]);
+	      $log->info(bindconf." updated as slave for: ".$zone["zone"]);
 	    }
 	  }
 

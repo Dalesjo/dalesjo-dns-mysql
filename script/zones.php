@@ -63,7 +63,7 @@ if($stmtServer->execute()) {
     if($rtnRndc === 0) {
       $log->info("named/rndc reloaded");
       if($stmtUpdate->execute()) {
-        $status++;
+        
       }
     } else {
       $log->info(implode("\n",$logRndc));
