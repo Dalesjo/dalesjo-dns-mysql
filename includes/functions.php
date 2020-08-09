@@ -96,10 +96,15 @@ function dnsWriteZone(pdo $pdo,log $log,$zone)
       }
       if($named->writeZone($dns)) {
         if($soa["dnssec"] === 1) {
+        	$log->info("DNSSERC - enabled for domain");
           if($named->signZone()) {
+          	$log->info("DNSSERC - signing ok");
             return true;
+          } else {
+          	$log->warning("DNSSEC - signing failed");
           }
         } else {
+
           return true;
         }
       }

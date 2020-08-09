@@ -41,11 +41,16 @@ class zone {
   private function checkZoneFile($zone,$file) {
     $oldDir = getcwd();
     chdir($this->dir);
+    $this->log->info("Changing to directory '". $this->dir ."'");
+
     $cmd = "/usr/sbin/named-checkzone {zonename} {tempfile}";
     $cmd = str_replace("{zonename}",escapeshellarg($zone),$cmd);
     $cmd = str_replace("{tempfile}",escapeshellarg($file),$cmd);
     exec($cmd,$log,$exit);
+    $this->log->info("running command '". $cmd ."'");
+
     chdir($oldDir);
+    $this->log->info("Changing back directory '". $this->dir ."'");
 
     if($exit === 0) {
       return true;
@@ -95,7 +100,7 @@ class zone {
           return true;
         }
       } else {
-        $this->log->warning("File not ok.");
+        $this->log->warning("File not ok '". $this->tmp ."'.");
       }
     } else {
       $this->log->warning("Data not written");
